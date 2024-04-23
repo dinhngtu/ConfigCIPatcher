@@ -62,7 +62,7 @@ namespace ConfigCIPatcher {
                 var code = codes[i];
                 if (code.opcode == OpCodes.Callvirt && code.operand is MethodInfo methodInfo && methodInfo.Name == "Add") {
                     var dictType = methodInfo.DeclaringType;
-                    if (dictType.Namespace == "System.Collections.Generic" && dictType.Name == "Dictionary`2" && dictType.GenericTypeArguments[0] == typeof(string)) {
+                    if (dictType.GetGenericTypeDefinition() == typeof(Dictionary<object, object>).GetGenericTypeDefinition() && dictType.GenericTypeArguments[0] == typeof(string)) {
                         code.operand = dictType.GetMethod("set_Item");
                         break;
                     }
