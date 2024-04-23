@@ -8,7 +8,8 @@ using System.Reflection.Emit;
 
 namespace ConfigCIPatcher {
     [HarmonyPatch("Microsoft.SecureBoot.UserConfig.VersionInfo", "BuildPFNDictionary")]
-    class BuildPFNDictionaryPatcher {
+    [HarmonyPatchCategory("alpha")]
+    class BuildPFNDictionaryPatcherAlpha {
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) {
             var codes = new List<CodeInstruction>(instructions);
 
@@ -51,10 +52,30 @@ namespace ConfigCIPatcher {
         }
     }
 
+    [HarmonyPatch("Microsoft.SecureBoot.UserConfig.VersionInfo", "BuildPFNDictionary")]
+    [HarmonyPatchCategory("beta")]
+    class BuildPFNDictionaryPatcherBeta {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, MethodBase original) {
+            var codes = new List<CodeInstruction>(instructions);
+
+            for (var i = 0; i < codes.Count; i++) {
+                var code = codes[i];
+                if (code.opcode == OpCodes.Callvirt && code.operand is MethodInfo methodInfo && methodInfo.Name == "Add") {
+                    var dictType = methodInfo.DeclaringType;
+                    if (dictType.Namespace == "System.Collections.Generic" && dictType.Name == "Dictionary`2" && dictType.GenericTypeArguments[0] == typeof(string)) {
+                        code.operand = dictType.GetMethod("set_Item");
+                        break;
+                    }
+                }
+            }
+            return codes;
+        }
+    }
+
     public static class Patcher {
         public static void Patch() {
             var harmony = new Harmony("xyz.tudinh.configcipatcher");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            harmony.PatchCategory(Assembly.GetExecutingAssembly(), "beta");
         }
     }
 }
